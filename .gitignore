@@ -137,3 +137,6 @@ Mango/
 
 # IDE
 .idea/
+
+brats-e1d3/e1d3/inference_results/
+brats-e1d3/e1d3/models/
