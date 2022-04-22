@@ -56,4 +56,4 @@ class DiceLoss(nn.Module):
 
         numerator = 2.0 * torch.sum(y_true * y_pred, dim=self._REDUCTION_DIMS)
         denominator = torch.sum(y_true, dim=self._REDUCTION_DIMS) + torch.sum(y_pred, dim=self._REDUCTION_DIMS)
-        return - torch.mean((numerator + self._EPS) / (denominator + self._EPS))
+        return 1 - torch.mean((numerator + self._EPS) / (denominator + self._EPS))

@@ -74,54 +74,10 @@ class PrototypeArchitecture3d(nn.Module):
         self.conv_pathA = nn.Conv3d(15, 2, kernel_size=1)
 
         ############### Path B
-        # Level 5
-        self.conv_dec_5_pathB = Conv3dNormAct(480, 240, kernel_size=3, padding=1)
-
-        # Level 4
-        self.upsample_4_pathB = nn.ConvTranspose3d(240, 240, kernel_size=2, stride=2)
-        self.conv_dec_4_pathB_1 = Conv3dNormAct(240 + 240, 240, kernel_size=3, padding=1)
-        self.conv_dec_4_pathB_2 = Conv3dNormAct(240, 120, kernel_size=3, padding=1)
-
-        # Level 3
-        self.upsample_3_pathB = nn.ConvTranspose3d(120, 120, kernel_size=2, stride=2)
-        self.conv_dec_3_pathB_1 = Conv3dNormAct(120 + 120, 120, kernel_size=3, padding=1)
-        self.conv_dec_3_pathB_2 = Conv3dNormAct(120, 60, kernel_size=3, padding=1)
-
-        # Level 2
-        self.upsample_2_pathB = nn.ConvTranspose3d(60, 60, kernel_size=2, stride=2)
-        self.conv_dec_2_pathB_1 = Conv3dNormAct(60 + 60, 60, kernel_size=3, padding=1)
-        self.conv_dec_2_pathB_2 = Conv3dNormAct(60, 30, kernel_size=3, padding=1)
-
-        # Level 1
-        self.upsample_1_pathB = nn.ConvTranspose3d(30, 30, kernel_size=2, stride=2)
-        self.conv_dec_1_pathB_1 = Conv3dNormAct(30 + 30, 30, kernel_size=3, padding=1)
-        self.conv_dec_1_pathB_2 = Conv3dNormAct(30, 15, kernel_size=3, padding=1)
 
         self.conv_pathB = nn.Conv3d(15, 2, kernel_size=1)
 
         ############### Path C
-        # Level 5
-        self.conv_dec_5_pathC = Conv3dNormAct(480, 240, kernel_size=3, padding=1)
-
-        # Level 4
-        self.upsample_4_pathC = nn.ConvTranspose3d(240, 240, kernel_size=2, stride=2)
-        self.conv_dec_4_pathC_1 = Conv3dNormAct(240 + 240, 240, kernel_size=3, padding=1)
-        self.conv_dec_4_pathC_2 = Conv3dNormAct(240, 120, kernel_size=3, padding=1)
-
-        # Level 3
-        self.upsample_3_pathC = nn.ConvTranspose3d(120, 120, kernel_size=2, stride=2)
-        self.conv_dec_3_pathC_1 = Conv3dNormAct(120 + 120, 120, kernel_size=3, padding=1)
-        self.conv_dec_3_pathC_2 = Conv3dNormAct(120, 60, kernel_size=3, padding=1)
-
-        # Level 2
-        self.upsample_2_pathC = nn.ConvTranspose3d(60, 60, kernel_size=2, stride=2)
-        self.conv_dec_2_pathC_1 = Conv3dNormAct(60 + 60, 60, kernel_size=3, padding=1)
-        self.conv_dec_2_pathC_2 = Conv3dNormAct(60, 30, kernel_size=3, padding=1)
-
-        # Level 1
-        self.upsample_1_pathC = nn.ConvTranspose3d(30, 30, kernel_size=2, stride=2)
-        self.conv_dec_1_pathC_1 = Conv3dNormAct(30 + 30, 30, kernel_size=3, padding=1)
-        self.conv_dec_1_pathC_2 = Conv3dNormAct(30, 15, kernel_size=3, padding=1)
 
         self.conv_pathC = nn.Conv3d(15, 2, kernel_size=1)
 
@@ -155,126 +111,60 @@ class PrototypeArchitecture3d(nn.Module):
         ######################### Decoder:
 
         ############### Level 5
-        x_pathA = self.conv_dec_5_pathA(x_5)
-        x_pathB = self.conv_dec_5_pathB(x_5)
-        x_pathC = self.conv_dec_5_pathC(x_5)
+        x_dec_path = self.conv_dec_5_pathA(x_5)
 
         ############### Level 4
         # Upsampling
-        x_pathA = self.upsample_4_pathA(x_pathA)  # Path A
-        x_pathB = self.upsample_4_pathB(x_pathB)  # Path B
-        x_pathC = self.upsample_4_pathC(x_pathC)  # Path C
+        x_dec_path = self.upsample_4_pathA(x_dec_path)  # Path A
         # Concatenation & Processing
-        x_pathA = self.conv_dec_4_pathA_2(
+        x_dec_path = self.conv_dec_4_pathA_2(
             self.conv_dec_4_pathA_1(
                 torch.cat(
-                    (x_pathA, x_4)
+                    (x_dec_path, x_4)
                     , dim=1)
             )
         )  # Path A
-        x_pathB = self.conv_dec_4_pathB_2(
-            self.conv_dec_4_pathB_1(
-                torch.cat(
-                    (x_pathB, x_4)
-                    , dim=1)
-            )
-        )  # Path B
-        x_pathC = self.conv_dec_4_pathC_2(
-            self.conv_dec_4_pathC_1(
-                torch.cat(
-                    (x_pathC, x_4)
-                    , dim=1)
-            )
-        )  # Path C
 
         ############### Level 3
         # Upsampling
-        x_pathA = self.upsample_3_pathA(x_pathA)  # Path A
-        x_pathB = self.upsample_3_pathB(x_pathB)  # Path B
-        x_pathC = self.upsample_3_pathC(x_pathC)  # Path C
+        x_dec_path = self.upsample_3_pathA(x_dec_path)  # Path A
         # Concatenation & Processing
-        x_pathA = self.conv_dec_3_pathA_2(
+        x_dec_path = self.conv_dec_3_pathA_2(
             self.conv_dec_3_pathA_1(
                 torch.cat(
-                    (x_pathA, x_3)
+                    (x_dec_path, x_3)
                     , dim=1)
             )
         )  # Path A
-        x_pathB = self.conv_dec_3_pathB_2(
-            self.conv_dec_3_pathB_1(
-                torch.cat(
-                    (x_pathB, x_3)
-                    , dim=1)
-            )
-        )  # Path B
-        x_pathC = self.conv_dec_3_pathC_2(
-            self.conv_dec_3_pathC_1(
-                torch.cat(
-                    (x_pathC, x_3)
-                    , dim=1)
-            )
-        )  # Path C
 
         ############### Level 2
         # Upsampling
-        x_pathA = self.upsample_2_pathA(x_pathA)  # Path A
-        x_pathB = self.upsample_2_pathB(x_pathB)  # Path B
-        x_pathC = self.upsample_2_pathC(x_pathC)  # Path C
+        x_dec_path = self.upsample_2_pathA(x_dec_path)  # Path A
         # Concatenation & Processing
-        x_pathA = self.conv_dec_2_pathA_2(
+        x_dec_path = self.conv_dec_2_pathA_2(
             self.conv_dec_2_pathA_1(
                 torch.cat(
-                    (x_pathA, x_2)
+                    (x_dec_path, x_2)
                     , dim=1)
             )
         )  # Path A
-        x_pathB = self.conv_dec_2_pathB_2(
-            self.conv_dec_2_pathB_1(
-                torch.cat(
-                    (x_pathB, x_2)
-                    , dim=1)
-            )
-        )  # Path B
-        x_pathC = self.conv_dec_2_pathC_2(
-            self.conv_dec_2_pathC_1(
-                torch.cat(
-                    (x_pathC, x_2)
-                    , dim=1)
-            )
-        )  # Path C
 
         ############### Level 1
         # Upsampling
-        x_pathA = self.upsample_1_pathA(x_pathA)  # Path A
-        x_pathB = self.upsample_1_pathB(x_pathB)  # Path B
-        x_pathC = self.upsample_1_pathC(x_pathC)  # Path C
+        x_dec_path = self.upsample_1_pathA(x_dec_path)  # Path A
         # Concatenation & Processing
-        x_pathA = self.conv_dec_1_pathA_2(
+        x_dec_path = self.conv_dec_1_pathA_2(
             self.conv_dec_1_pathA_1(
                 torch.cat(
-                    (x_pathA, x_1)
+                    (x_dec_path, x_1)
                     , dim=1)
             )
         )  # Path A
-        x_pathB = self.conv_dec_1_pathB_2(
-            self.conv_dec_1_pathB_1(
-                torch.cat(
-                    (x_pathB, x_1)
-                    , dim=1)
-            )
-        )  # Path B
-        x_pathC = self.conv_dec_1_pathC_2(
-            self.conv_dec_1_pathC_1(
-                torch.cat(
-                    (x_pathC, x_1)
-                    , dim=1)
-            )
-        )  # Path C
 
         # Classification
-        x_pathA = self.conv_pathA(x_pathA)
-        x_pathB = self.conv_pathB(x_pathB)
-        x_pathC = self.conv_pathC(x_pathC)
+        x_pathA = self.conv_pathA(x_dec_path)
+        x_pathB = self.conv_pathB(x_dec_path)
+        x_pathC = self.conv_pathC(x_dec_path)
 
         return x_pathA, x_pathB, x_pathC
 

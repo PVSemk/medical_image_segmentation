@@ -2,8 +2,8 @@
 
 ################# DATA #####################
 data:
-  data_directory_train: '/home/pavel/fast_drive/Course work/BRATS2021/datasets/train_cropped_for_e3d/train'
-  data_directory_validate: '/home/pavel/fast_drive/Course work/BRATS2021/datasets/train_cropped_for_e3d/val'
+  data_directory_train: '/home/pavel/fast_drive/Course work/BRATS2021/datasets/train_cropped_for_e3d/train_30_percent_subset'
+  data_directory_validate: '/home/pavel/fast_drive/Course work/BRATS2021/datasets/train_cropped_for_e3d/val_30_percent_subset'
 
   # Following is for 'Testing'
   data_directory_test: '/home/pavel/fast_drive/Course work/BRATS2021/datasets/test (val_subset)'
@@ -35,15 +35,15 @@ network:
 ############### VALIDATE ###################
 validate:
   # Validation done at the end of every epoch
-  segments_per_epoch: 1000
+  segments_per_epoch: 75
   batch_size: 6
   augmentation: False
   augmentations_to_do: [ 'flip', 'affine', 'elastic', 'gamma' ]
 
 ################# TRAIN ####################
 train:
-  segments_per_epoch: 500
-  batch_size: 2
+  segments_per_epoch: 150
+  batch_size: 4
   augmentation: True
   augmentations_to_do: [ 'flip', 'affine', 'elastic', 'gamma' ]
 
