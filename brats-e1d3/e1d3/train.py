@@ -7,14 +7,16 @@ import numpy as np
 import torch
 from torch.optim import lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
+from torch.nn.parallel import DataParallel
 
-from utils.enc1_dec3 import PrototypeArchitecture3d
+from models.enc1_dec3 import PrototypeArchitecture3d
 from utils.losses import XEntropyPlusDiceLoss
 from utils.metrics import MetricsPt
 from utils.dataloader import DatasetMMEP3d
 from utils.data_augment import DataAugmentation
 from utils.session_logger import show_progress, log_configuration
 from utils.parse_yaml import parse_yaml_config
+from shutil import copy
 
 seed = 40
 os.environ['PYTHONHASHSEED'] = str(seed)
@@ -37,7 +39,7 @@ class TrainSession:
             assert config_file is not None, f"`config_file` is needed if `config` not provided."
             assert os.path.exists(config_file), f"config file {config_file} not found."
             config = parse_yaml_config(config_file)
-
+        self.config = config
         config_data = config['data']
         num_classes = config_data.get('num_classes')
         num_channels = len(config_data.get('channels'))
@@ -66,6 +68,9 @@ class TrainSession:
         self.model_checkpoint_filepath = os.path.join(models_folder, run_date_time, model_checkpoint_format)
 
         tensorboard_log_path = os.path.join(models_folder, run_date_time)
+        if config_file is not None:
+            os.makedirs(tensorboard_log_path, exist_ok=True)
+            copy(config_file, tensorboard_log_path)
         # log_configuration(tensorboard_log_path, config_file)
         # log_configuration(tensorboard_log_path, 'utils/enc1_dec3.py')
 
@@ -79,7 +84,8 @@ class TrainSession:
 
         #####################################
         # network model
-        self.model = PrototypeArchitecture3d(config).cuda()
+
+        self.model = PrototypeArchitecture3d(config)
 
         # initialization:
         def init_weights(m):
@@ -88,8 +94,17 @@ class TrainSession:
                 torch.nn.init.kaiming_normal_(m.weight)  # He-Weights Init
                 if m.bias is not None:
                     torch.nn.init.constant_(m.bias, 0.1)  # Constant 0.1
-
-        self.model.apply(init_weights)
+        if config_net.get("resume_training"):
+            model_load_directory = config_net.get('model_load_directory')
+            model_load_config = config_net.get('model_load_config')
+            model_checkpoint_str = 'epoch_{epoch:02d}_val_loss_{val_loss:.2f}.pt'.format(
+                epoch=int(model_load_config[1]), val_loss=float(model_load_config[2]))
+            model_file = os.path.join(model_load_directory, model_load_config[0], model_checkpoint_str)
+            assert os.path.exists(model_file)
+            self.load_model(model_file)
+        else:
+            self.model.apply(init_weights)
+        self.model = DataParallel(self.model).cuda()
 
         #####################################
         # augmentation object:
@@ -132,13 +147,14 @@ class TrainSession:
         self.writer = SummaryWriter(log_dir=tensorboard_log_path)  # read from config
 
         # log graph to tensorboard:
-        with torch.no_grad():
-            random_tensor = torch.zeros(train_batch_size, num_channels, *segment_size).cuda()
-            self.writer.add_graph(self.model, random_tensor)
-            del random_tensor
+        if not isinstance(self.model, DataParallel):
+            with torch.no_grad():
+                random_tensor = torch.zeros(train_batch_size, num_channels, *segment_size).cuda()
+                self.writer.add_graph(self.model, random_tensor)
+                del random_tensor
 
     def load_model(self, path):
-        self.model.load_state_dict(torch.load(path))  # providing a dictionary object
+        self.model.load_state_dict(torch.load(path, map_location="cpu"))  # providing a dictionary object
         print('Loaded Model file:', path)
         self.model.eval()  # setting dropout/batchnorm/etc layers to evaluation mode
 
@@ -259,7 +275,8 @@ class TrainSession:
             show_progress(i, self.train_iterations, 'Loss:%.4f' % (self.train_metrics['loss'].item() / i))
 
         per_epoch_dict = self.per_epoch_metrics(self.train_metrics, i, 'train')
-        self.log_to_tensorboard(per_epoch_dict, epoch)
+        if self.config.get("network").get("log_to_tensorboard"):
+            self.log_to_tensorboard(per_epoch_dict, epoch)
         self.delete_generator('train')
         return per_epoch_dict
 
@@ -310,7 +327,8 @@ class TrainSession:
                 show_progress(i, self.val_iterations, 'Loss:%.4f' % (self.val_metrics['loss'].item() / i))
 
         per_epoch_dict = self.per_epoch_metrics(self.val_metrics, i, 'val')
-        self.log_to_tensorboard(per_epoch_dict, epoch)
+        if self.config.get("network").get("log_to_tensorboard"):
+            self.log_to_tensorboard(per_epoch_dict, epoch)
         self.delete_generator('val')
         return per_epoch_dict
 
@@ -342,7 +360,7 @@ class TrainSession:
     def save_model(self, epoch, epoch_loss_val):
         """"""
         save_path = self.model_checkpoint_filepath.format(epoch=epoch, val_loss=epoch_loss_val)
-        torch.save(self.model.state_dict(), save_path)
+        torch.save(self.model.module.state_dict(), save_path)
         print('> Model Saved: {}'.format(save_path))
 
     def log_to_tensorboard(self, scalar_dict, epoch):
@@ -360,9 +378,9 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Preprocess BraTS data.')
     parser.add_argument('--config', type=str, required=True, help='.yaml config file')
-    parser.add_argument('--gpu', type=int, required=False, default=0, help='CUDA device id')
+    parser.add_argument('--gpu', type=str, required=False, default="0", help='CUDA device id')
     args = parser.parse_args()
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     sess = TrainSession(config_file=args.config)
     sess.loop_over_epochs()

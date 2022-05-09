@@ -7,7 +7,7 @@ data:
 
   # Following is for 'Testing'
   data_directory_test: '/home/pavel/fast_drive/Course work/BRATS2021/datasets/test (val_subset)'
-  save_directory_test: '/home/pavel/fast_drive/Course work/BRATS2021/datasets/test (val_subset)'
+  save_directory_test: '/media/ssd/Course work/BRATS2021/brats-e1d3/e1d3/inference_results/experiment_0'
 
   num_classes: 2
   channels: [ 'flair_norm', 't1_norm', 't1ce_norm', 't2_norm' ]
@@ -25,11 +25,13 @@ network:
   data_shape: [ 96, 96, 96 ]
   label_shape: [ 96, 96, 96 ]
 
-  model_save_directory: '/home/pavel/fast_drive/Course work/BRATS2021/brats-e1d3/e1d3/models'
+  model_save_directory: '/home/pavel/fast_drive/Course work/BRATS2021/brats-e1d3/e1d3/checkpoints'
 
   # for testing or resuming training from saved model:
-  model_load_directory: '/home/pavel/fast_drive/Course work/BRATS2021/brats-e1d3/e1d3/models'
-  model_load_config: [ '2021-10-16_14.27.34', '15', '-0.98' ]
+  model_load_directory: '/home/pavel/fast_drive/Course work/BRATS2021/brats-e1d3/e1d3/checkpoints'
+  model_load_config: [ '2022-03-29_20.56.26', '500', '0.10' ]
+  resume_training: True
+  log_to_tensorboard: False
   # format: [date_time_rand<randomization#>, epoch, val_loss]
 
 ############### VALIDATE ###################
@@ -58,7 +60,7 @@ train:
 
 ################## TEST ####################
 test:
-  batch_size: 6
+  batch_size: 4
   test_time_aug: False
   with_label: False
   save_segmentation: True

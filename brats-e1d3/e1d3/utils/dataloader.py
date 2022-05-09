@@ -54,6 +54,7 @@ class DatasetMMEP3d(torch.utils.data.Dataset):
             int(self.batches_per_epoch), train_or_validate.upper()))
 
         self.patients_list = self.data_io_obj.patients_list()
+        print("Total Number of patients {} during {}".format(len(self.patients_list), train_or_validate.upper()))
         self.augment = augment
 
     def __len__(self):
