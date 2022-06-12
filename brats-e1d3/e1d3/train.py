@@ -10,6 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.nn.parallel import DataParallel
 
 from models.enc1_dec3 import PrototypeArchitecture3d
+from models.resnet_unet import ResNet50UNet
 from utils.losses import XEntropyPlusDiceLoss
 from utils.metrics import MetricsPt
 from utils.dataloader import DatasetMMEP3d
@@ -64,7 +65,7 @@ class TrainSession:
 
         run_date_time = time.strftime('%Y-%m-%d_%H.%M.%S')  # create folder in models folder
         print('> Session runtime:', run_date_time)
-        model_checkpoint_format = 'epoch_{epoch:02d}_val_loss_{val_loss:.2f}.pt'
+        model_checkpoint_format = 'best_model_val_loss_top_{top_id}.pt'
         self.model_checkpoint_filepath = os.path.join(models_folder, run_date_time, model_checkpoint_format)
 
         tensorboard_log_path = os.path.join(models_folder, run_date_time)
@@ -81,11 +82,13 @@ class TrainSession:
                                   for met in self.metrics_list_train)
         self.val_metrics = dict((met, torch.zeros(1, dtype=torch.float32).cpu().requires_grad_(False))
                                 for met in self.metrics_list_val)
+        self.best_val_losses = [1e6, 1e6, 1e6]
 
         #####################################
         # network model
 
-        self.model = PrototypeArchitecture3d(config)
+        # self.model = PrototypeArchitecture3d(config)
+        self.model = ResNet50UNet(config)
 
         # initialization:
         def init_weights(m):
@@ -97,8 +100,8 @@ class TrainSession:
         if config_net.get("resume_training"):
             model_load_directory = config_net.get('model_load_directory')
             model_load_config = config_net.get('model_load_config')
-            model_checkpoint_str = 'epoch_{epoch:02d}_val_loss_{val_loss:.2f}.pt'.format(
-                epoch=int(model_load_config[1]), val_loss=float(model_load_config[2]))
+            model_checkpoint_str = 'best_model_val_loss_{}.pt'.format(
+                model_load_config[1])
             model_file = os.path.join(model_load_directory, model_load_config[0], model_checkpoint_str)
             assert os.path.exists(model_file)
             self.load_model(model_file)
@@ -147,11 +150,11 @@ class TrainSession:
         self.writer = SummaryWriter(log_dir=tensorboard_log_path)  # read from config
 
         # log graph to tensorboard:
-        if not isinstance(self.model, DataParallel):
-            with torch.no_grad():
-                random_tensor = torch.zeros(train_batch_size, num_channels, *segment_size).cuda()
-                self.writer.add_graph(self.model, random_tensor)
-                del random_tensor
+        # if not isinstance(self.model, DataParallel):
+        with torch.no_grad():
+            random_tensor = torch.zeros(train_batch_size, num_channels, *segment_size).cuda()
+            self.writer.add_graph(self.model.module, random_tensor)
+            del random_tensor
 
     def load_model(self, path):
         self.model.load_state_dict(torch.load(path, map_location="cpu"))  # providing a dictionary object
@@ -359,9 +362,16 @@ class TrainSession:
 
     def save_model(self, epoch, epoch_loss_val):
         """"""
-        save_path = self.model_checkpoint_filepath.format(epoch=epoch, val_loss=epoch_loss_val)
+        for i, top_loss in enumerate(self.best_val_losses):
+            if epoch_loss_val < top_loss:
+                save_path = self.model_checkpoint_filepath.format(top_id=i + 1)
+                torch.save(self.model.module.state_dict(), save_path)
+                print('> Model Saved, top {}: {}'.format(i + 1, save_path))
+                self.best_val_losses[i] = epoch_loss_val
+                break
+        save_path = os.path.join(os.path.dirname(self.model_checkpoint_filepath), "model_last.pt")
         torch.save(self.model.module.state_dict(), save_path)
-        print('> Model Saved: {}'.format(save_path))
+        print('> Last Model Saved, epoch {}: {}'.format(epoch, save_path))
 
     def log_to_tensorboard(self, scalar_dict, epoch):
         """routine to log per-epoch metrics to tensorboard"""
