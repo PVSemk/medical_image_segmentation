@@ -10,7 +10,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.nn.parallel import DataParallel
 
 from models.enc1_dec3 import PrototypeArchitecture3d
-from models.resnet_unet import ResNet50UNet
+from models.convnext_unet import ConvNextBaseUnet
 from utils.losses import XEntropyPlusDiceLoss
 from utils.metrics import MetricsPt
 from utils.dataloader import DatasetMMEP3d
@@ -88,7 +88,7 @@ class TrainSession:
         # network model
 
         # self.model = PrototypeArchitecture3d(config)
-        self.model = ResNet50UNet(config)
+        self.model = ConvNextBaseUnet(config)
 
         # initialization:
         def init_weights(m):
@@ -391,6 +391,6 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', type=str, required=False, default="0", help='CUDA device id')
     args = parser.parse_args()
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
+    # os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     sess = TrainSession(config_file=args.config)
     sess.loop_over_epochs()
