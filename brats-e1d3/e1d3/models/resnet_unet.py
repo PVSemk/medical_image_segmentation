@@ -298,6 +298,7 @@ class UnetDecoder_3D(nn.Module):
             decoder_channels,
             n_blocks=5,
             center=False,
+            remove_first=True
     ):
         super().__init__()
 
@@ -307,7 +308,7 @@ class UnetDecoder_3D(nn.Module):
                     n_blocks, len(decoder_channels)
                 )
             )
-
+        self.remove_first = remove_first
         encoder_channels = encoder_channels[1:]  # remove first skip with same spatial resolution
         encoder_channels = encoder_channels[::-1]  # reverse channels to start from head of encoder
 
@@ -332,8 +333,8 @@ class UnetDecoder_3D(nn.Module):
         self.blocks = nn.ModuleList(blocks)
 
     def forward(self, *features):
-
-        features = features[1:]    # remove first skip with same spatial resolution
+        if self.remove_first:
+            features = features[1:]    # remove first skip with same spatial resolution
         features = features[::-1]  # reverse channels to start from head of encoder
 
         head = features[0]
@@ -358,7 +359,19 @@ class ResNet50UNet(nn.Module):
 
         self.encoder = ResNetEncoder_3D(config, depth=encoder_depth, block=Bottleneck_3D, layers=[3, 4, 6, 3])
 
-        self.decoder = UnetDecoder_3D(
+        self.decoder_pathA = UnetDecoder_3D(
+            encoder_channels=self.encoder.out_channels,
+            decoder_channels=decoder_channels,
+            n_blocks=encoder_depth,
+            center=False
+        )
+        self.decoder_pathB = UnetDecoder_3D(
+            encoder_channels=self.encoder.out_channels,
+            decoder_channels=decoder_channels,
+            n_blocks=encoder_depth,
+            center=False
+        )
+        self.decoder_pathC = UnetDecoder_3D(
             encoder_channels=self.encoder.out_channels,
             decoder_channels=decoder_channels,
             n_blocks=encoder_depth,
@@ -376,10 +389,12 @@ class ResNet50UNet(nn.Module):
 
     def forward(self, x):
         features = self.encoder(x)
-        decoder_output = self.decoder(*features)
-        x_pathA = self.conv_pathA(decoder_output)
-        x_pathB = self.conv_pathB(decoder_output)
-        x_pathC = self.conv_pathC(decoder_output)
+        decoder_output_pathA = self.decoder_pathA(*features)
+        decoder_output_pathB = self.decoder_pathB(*features)
+        decoder_output_pathC = self.decoder_pathC(*features)
+        x_pathA = self.conv_pathA(decoder_output_pathA)
+        x_pathB = self.conv_pathB(decoder_output_pathB)
+        x_pathC = self.conv_pathC(decoder_output_pathC)
 
         return x_pathA, x_pathB, x_pathC
 

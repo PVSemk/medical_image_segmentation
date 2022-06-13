@@ -7,7 +7,8 @@ import torch
 import torch.nn.functional as F
 from scipy import ndimage
 
-from utils.enc1_dec3 import PrototypeArchitecture3d
+from models.enc1_dec3 import PrototypeArchitecture3d
+from models.resnet_unet import ResNet50UNet
 from utils.inferenceloader import DatasetInference3d
 from utils.session_logger import show_progress
 from utils.parse_yaml import parse_yaml_config
@@ -46,10 +47,10 @@ class TestSession:
 
         model_load_directory = config_net.get('model_load_directory')
         model_load_config = config_net.get('model_load_config')
-        model_checkpoint_str = 'epoch_{epoch:02d}_val_loss_{val_loss:.2f}.pt'.format(
-            epoch=int(model_load_config[1]), val_loss=float(model_load_config[2]))
+        model_checkpoint_str = 'best_model_val_loss_{}.pt'.format(
+            model_load_config[1])
         model_file = os.path.join(model_load_directory, model_load_config[0], model_checkpoint_str)
-        self.model = PrototypeArchitecture3d(config=config).cuda()
+        self.model = ResNet50UNet(config=config).cuda()
         self.load_model(model_file)
 
         self.inference_loader_obj = DatasetInference3d(config)
