@@ -53,7 +53,6 @@ class TrainSession:
         self.total_epochs = config_train.get('epochs', None)
         num_workers = config_train.get('workers_multithreading')
         initial_learning_rate = config_train.get('initial_learning_rate')
-        lr_decay_rate = config_train.get('poly_decay_rate')
         train_batch_size = config_train.get('batch_size')
         train_augment = config_train.get('augmentation')
         train_augment_list = config_train.get('augmentations_to_do', [])
@@ -127,7 +126,7 @@ class TrainSession:
         # val generator:
         self.val_gen_params = {
             'batch_size': val_batch_size,
-            'shuffle': True,
+            'shuffle': False,
             'num_workers': num_workers,
             'pin_memory': True,
         }
@@ -136,12 +135,9 @@ class TrainSession:
 
         #####################################
         self.loss_fn = XEntropyPlusDiceLoss(num_classes=num_classes).cuda()
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=initial_learning_rate, momentum=0.99,
-                                         weight_decay=1e-6, dampening=0, nesterov=True)
+        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=initial_learning_rate)
 
-        def lr_lambda(epoch):
-            return (1 - epoch / self.total_epochs) ** lr_decay_rate
-        self.scheduler = lr_scheduler.LambdaLR(self.optimizer, lr_lambda, last_epoch=-1, verbose=True)
+        self.scheduler = lr_scheduler.CosineAnnealingWarmRestarts(self.optimizer, T_0=1, T_mult=2)
 
         self.metrics_obj = MetricsPt()
 
