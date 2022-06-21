@@ -11,6 +11,7 @@ from torch.nn.parallel import DataParallel
 
 from models.enc1_dec3 import PrototypeArchitecture3d
 from models.convnext_unet import ConvNextBaseUnet
+from models.resnet_unet import ResNet50UNet
 from utils.losses import XEntropyPlusDiceLoss
 from utils.metrics import MetricsPt
 from utils.dataloader import DatasetMMEP3d
@@ -53,7 +54,6 @@ class TrainSession:
         self.total_epochs = config_train.get('epochs', None)
         num_workers = config_train.get('workers_multithreading')
         initial_learning_rate = config_train.get('initial_learning_rate')
-        lr_decay_rate = config_train.get('poly_decay_rate')
         train_batch_size = config_train.get('batch_size')
         train_augment = config_train.get('augmentation')
         train_augment_list = config_train.get('augmentations_to_do', [])
@@ -86,9 +86,16 @@ class TrainSession:
 
         #####################################
         # network model
-
+        from BTCV.networks.unetr import UNETR, SwinUNETR
         # self.model = PrototypeArchitecture3d(config)
-        self.model = ConvNextBaseUnet(config)
+        # self.model = ResNet50UNet(config)
+        self.model = SwinUNETR(in_channels=4,
+                           out_channels=2,
+                           img_size=(96, 96, 96),
+                           feature_size=48,
+                           norm_name="instance"
+                               )# initialization:
+        # self.model = ConvNextBaseUnet(config)
 
         # initialization:
         def init_weights(m):
@@ -127,7 +134,7 @@ class TrainSession:
         # val generator:
         self.val_gen_params = {
             'batch_size': val_batch_size,
-            'shuffle': True,
+            'shuffle': False,
             'num_workers': num_workers,
             'pin_memory': True,
         }
@@ -136,12 +143,9 @@ class TrainSession:
 
         #####################################
         self.loss_fn = XEntropyPlusDiceLoss(num_classes=num_classes).cuda()
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=initial_learning_rate, momentum=0.99,
-                                         weight_decay=1e-6, dampening=0, nesterov=True)
+        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=initial_learning_rate)
 
-        def lr_lambda(epoch):
-            return (1 - epoch / self.total_epochs) ** lr_decay_rate
-        self.scheduler = lr_scheduler.LambdaLR(self.optimizer, lr_lambda, last_epoch=-1, verbose=True)
+        self.scheduler = lr_scheduler.CosineAnnealingWarmRestarts(self.optimizer, T_0=1, T_mult=2)
 
         self.metrics_obj = MetricsPt()
 
@@ -157,7 +161,8 @@ class TrainSession:
             del random_tensor
 
     def load_model(self, path):
-        self.model.load_state_dict(torch.load(path, map_location="cpu"))  # providing a dictionary object
+        weights = torch.load(path, map_location="cpu")
+        self.model.load_state_dict(weights)  # providing a dictionary object
         print('Loaded Model file:', path)
         self.model.eval()  # setting dropout/batchnorm/etc layers to evaluation mode
 
@@ -391,6 +396,6 @@ if __name__ == '__main__':
     parser.add_argument('--gpu', type=str, required=False, default="0", help='CUDA device id')
     args = parser.parse_args()
 
-    # os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     sess = TrainSession(config_file=args.config)
     sess.loop_over_epochs()
