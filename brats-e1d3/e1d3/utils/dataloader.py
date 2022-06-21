@@ -70,7 +70,8 @@ class DatasetMMEP3d(torch.utils.data.Dataset):
         The pairs are collated into a batch by a `torch.utils.data.DataLoader`
         """
         # randomly choose a patient
-        patient_id = self.patients_list[index % len(self.patients_list)]  # np.random.choice(self.patients_list) #
+        # patient_id = self.patients_list[index % len(self.patients_list)]  # np.random.choice(self.patients_list) #
+        patient_id = np.random.choice(self.patients_list)
         # read patient volumes
         data, weight, label = self.data_io_obj.load_patient_npy(patient_id)
         data, label = self.__get_random_sampled_data_label(data, weight, label)

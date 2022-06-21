@@ -353,23 +353,23 @@ class ASPP(nn.Module):
         super(ASPP, self).__init__()
 
         self.conv_1x1_1 = nn.Conv3d(32, 16, kernel_size=1)
-        self.bn_conv_1x1_1 = nn.InstanceNorm3d(16)
+        self.bn_conv_1x1_1 = nn.InstanceNorm3d(16, affine=True)
 
         self.conv_3x3_1 = nn.Conv3d(32, 16, kernel_size=3, stride=1, padding=6, dilation=6)
-        self.bn_conv_3x3_1 = nn.InstanceNorm3d(16)
+        self.bn_conv_3x3_1 = nn.InstanceNorm3d(16, affine=True)
 
         self.conv_3x3_2 = nn.Conv3d(32, 16, kernel_size=3, stride=1, padding=12, dilation=12)
-        self.bn_conv_3x3_2 = nn.InstanceNorm3d(16)
+        self.bn_conv_3x3_2 = nn.InstanceNorm3d(16, affine=True)
 
         self.conv_3x3_3 = nn.Conv3d(32, 16, kernel_size=3, stride=1, padding=18, dilation=18)
-        self.bn_conv_3x3_3 = nn.InstanceNorm3d(16)
+        self.bn_conv_3x3_3 = nn.InstanceNorm3d(16, affine=True)
 
         self.avg_pool = nn.AdaptiveAvgPool3d(1)
 
         self.conv_1x1_2 = nn.Conv3d(32, 16, kernel_size=1)
-        self.bn_conv_1x1_2 = nn.InstanceNorm3d(16)
 
         self.conv_1x1_3 = nn.Conv3d(80, 16, kernel_size=1)
+        self.bn_conv_1x1_3 = nn.InstanceNorm3d(16, affine=True)
         self.relu = nn.LeakyReLU(negative_slope=0.01, inplace=True)
 
 
@@ -384,11 +384,11 @@ class ASPP(nn.Module):
         out_3x3_3 = self.relu(self.bn_conv_3x3_3(self.conv_3x3_3(feature_map)))
 
         out_img = self.avg_pool(feature_map)
-        out_img = self.relu(self.bn_conv_1x1_2(self.conv_1x1_2(out_img)))
+        out_img = self.relu(self.conv_1x1_2(out_img))
         out_img = F.interpolate(out_img, size=(feature_map_h, feature_map_w, feature_map_c), mode='trilinear', align_corners=True)
 
         out = torch.cat([out_1x1, out_3x3_1, out_3x3_2, out_3x3_3, out_img], 1)
-        out = self.relu(self.conv_1x1_3(out))
+        out = self.relu(self.bn_conv_1x1_3(self.conv_1x1_3(out)))
 
         return out
 
@@ -397,7 +397,7 @@ class ResNet50UNet(nn.Module):
         self,
         config=None,
         encoder_depth = 5,
-        decoder_channels: List[int] = (256, 128, 64, 32, 16),
+        decoder_channels: List[int] = (512, 256, 128, 64, 32),
     ):
         super().__init__()
 
@@ -409,7 +409,7 @@ class ResNet50UNet(nn.Module):
             n_blocks=encoder_depth,
             center=False
         )
-        # self.aspp = ASPP()
+        self.aspp = ASPP()
         # self.decoder_pathB = UnetDecoder_3D(
         #     encoder_channels=self.encoder.out_channels,
         #     decoder_channels=decoder_channels,
@@ -435,7 +435,7 @@ class ResNet50UNet(nn.Module):
     def forward(self, x):
         features = self.encoder(x)
         decoder_output_pathA = self.decoder_pathA(*features)
-        # decoder_output_pathA = self.aspp(decoder_output_pathA)
+        decoder_output_pathA = self.aspp(decoder_output_pathA)
         # decoder_output_pathB = self.decoder_pathB(*features)
         # decoder_output_pathC = self.decoder_pathC(*features)
         x_pathA = self.conv_pathA(decoder_output_pathA)
