@@ -1,9 +1,3 @@
-# E<sub>1</sub>D<sub>3</sub> U-Net for Brain Tumor Segmentation
-
-This repository contains official source code for the method proposed in: [E<sub>1</sub>D<sub>3</sub> U-Net for Brain Tumor
-Segmentation: Submission to the RSNA-ASNR-MICCAI BraTS 2021 Challenge](
-https://arxiv.org/abs/2110.02519).
-
 ## Data Preparation:
 
 Download the BraTS dataset.
@@ -66,42 +60,4 @@ python train.py --config config.yaml --gpu 0
 **Testing:**
 ```shell
 python test.py --config config.yaml --gpu 0
-```
-
-### 2. Docker
-
-If you have [Docker](https://docs.docker.com/get-docker/) set-up with [GPU support](
-https://github.com/NVIDIA/nvidia-docker), build a docker image as follows:
-```shell
-docker build -t brats_e1d3 .
-```
-To execute the container for training/testing, provide paths in *absolute* format.
-
-**Training:**
-```shell
-docker run --rm --gpus all -v "train_data_path":"train_data_path" -v "val_data_path":"val_data_path" -v "model_save_path":"model_save_path" -v "config_path":"config_path" brats_e1d3 --train --config "config_path/config.yaml" --gpu 0
-```
-
-**Testing:**
-```shell
-docker run --rm --gpus all -v "test_data_path":"test_data_path" -v "model_load_path":"model_load_path" -v "config_path":"config_path" brats_e1d3 --test --config "config_path/config.yaml" --gpu 0
-```
-
-**[Note]:** The paths set internally in the docker container should match those provided in `config.yaml`, as those will
-only be visible to the training/testing session.
-
-<!-- Citation-->
-## Citation
-
-If you found any part of this work useful, please cite as follows:
-```bibtex
-@misc{bukhari2021e1d3,
-    title={E1D3 U-Net for Brain Tumor Segmentation: Submission to the RSNA-ASNR-MICCAI BraTS 2021 Challenge},
-    author={Syed Talha Bukhari and Hassan Mohy-ud-Din},
-    year={2021},
-    eprint={2110.02519},
-    archivePrefix={arXiv},
-    primaryClass={eess.IV},
-    url={https://arxiv.org/abs/2110.02519},
-}
 ```

@@ -89,13 +89,13 @@ class TrainSession:
         from BTCV.networks.unetr import UNETR, SwinUNETR
         # self.model = PrototypeArchitecture3d(config)
         # self.model = ResNet50UNet(config)
-        self.model = SwinUNETR(in_channels=4,
-                           out_channels=2,
-                           img_size=(96, 96, 96),
-                           feature_size=48,
-                           norm_name="instance"
-                               )# initialization:
-        # self.model = ConvNextBaseUnet(config)
+        # self.model = SwinUNETR(in_channels=4,
+        #                    out_channels=2,
+        #                    img_size=(96, 96, 96),
+        #                    feature_size=48,
+        #                    norm_name="instance"
+        #                        )# initialization:
+        self.model = ConvNextBaseUnet(config)
 
         # initialization:
         def init_weights(m):

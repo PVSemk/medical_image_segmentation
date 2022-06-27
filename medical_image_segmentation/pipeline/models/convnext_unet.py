@@ -155,7 +155,7 @@ class ConvNextBaseUnet(nn.Module):
         self,
         config=None,
         encoder_depth = 4,
-        decoder_channels = (512, 256, 129, 64),
+        decoder_channels = (512, 256, 128, 64),
     ):
         super().__init__()
 

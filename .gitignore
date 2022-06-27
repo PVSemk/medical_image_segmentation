@@ -138,5 +138,5 @@ Mango/
 # IDE
 .idea/
 
-brats-e1d3/e1d3/inference_results/
-brats-e1d3/e1d3/checkpoints/
+medical_image_segmentation/pipeline/inference_results/
+medical_image_segmentation/pipeline/checkpoints/
